@@ -1,0 +1,23 @@
+version: '2'
+services:
+
+    # See: docker/Dockerfile
+    code_challenge_api:
+        build: .
+
+        restart: always
+
+        container_name: docker_code_challenge_api
+
+        environment:
+            PHP_ERROR_REPORTING: "E_ALL & ~E_STRICT"
+            APACHE_RUN_USER: david
+            APACHE_RUN_GROUP: david
+
+        ports:
+            - "8080:80"
+
+        volumes:
+            - "../.:/var/www"
+
+        network_mode: "bridge"
