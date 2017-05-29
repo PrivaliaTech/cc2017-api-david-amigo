@@ -66,26 +66,7 @@ class MazePathFinder
             $dir = $this->findNextMove($pos, $dir);
             $pos = $this->nextPosition($pos, $dir);
 
-//            for ($y = 0; $y < $this->height; ++$y) {
-//                for ($x = 0; $x < $this->width; ++$x) {
-//                    if ($y == $this->goal->y && $x == $this->goal->x) {
-//                        echo '{} ';
-//                    } elseif ($y == 0 || $y == $this->height - 1) {
-//                        echo '## ';
-//                    } elseif ($x == 0 || $x == $this->width - 1) {
-//                        echo '## ';
-//                    } elseif ($this->maze[$y][$x] == -1) {
-//                        echo '## ';
-//                    } elseif ($this->maze[$y][$x] == -2) {
-//                        echo '** ';
-//                    } elseif ($this->maze[$y][$x] > 0) {
-//                        echo sprintf('%02d ', $this->maze[$y][$x]);
-//                    } else {
-//                        echo '   ';
-//                    }
-//                }
-//                echo PHP_EOL;
-//            }
+//            echo $this->printMaze();
 //            usleep(250000);echo PHP_EOL;
         } while ($dir != null && ($pos->y != $this->goal->y || $pos->x != $this->goal->x));
 
@@ -107,7 +88,37 @@ class MazePathFinder
 
         ksort($moves, SORT_NUMERIC);
         return reset($moves);
+    }
 
+    /**
+     * Returns the maze in an string in print format
+     *
+     * @return string
+     */
+    public function printMaze()
+    {
+        $result = '';
+        for ($y = 0; $y < $this->height; ++$y) {
+            for ($x = 0; $x < $this->width; ++$x) {
+                if ($y == $this->goal->y && $x == $this->goal->x) {
+                    $result .= '{} ';
+                } elseif ($y == 0 || $y == $this->height - 1) {
+                    $result .= '## ';
+                } elseif ($x == 0 || $x == $this->width - 1) {
+                    $result .= '## ';
+                } elseif ($this->maze[$y][$x] == -1) {
+                    $result .= '## ';
+                } elseif ($this->maze[$y][$x] == -2) {
+                    $result .= '** ';
+                } elseif ($this->maze[$y][$x] > 0) {
+                    $result .= sprintf('%02d ', $this->maze[$y][$x]);
+                } else {
+                    $result .= '   ';
+                }
+            }
+            $result .= PHP_EOL;
+        }
+        return $result;
     }
 
     /**

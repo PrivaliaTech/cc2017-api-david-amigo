@@ -2,6 +2,7 @@
 
 use App\Services\Direction;
 use App\Services\GameConditions;
+use App\Services\MazePathFinder;
 use Silex\Application;
 use Silex\Provider\SessionServiceProvider;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -57,8 +58,12 @@ $app->match('/move', function (Request $request) use ($app) {
     // Compute current direction
     $dir = Direction::computeDirection($pos, $prev);
 
+    $finder = new MazePathFinder($maze, $height, $width, $goal);
+    $move = $finder->nextMove($pos, $prev);
+
     return new JsonResponse(array(
-        'move' => 'up'
+        'move' => $move,
+        'debug' => $finder->printMaze()
     ));
 });
 
