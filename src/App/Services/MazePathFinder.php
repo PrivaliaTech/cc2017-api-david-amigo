@@ -50,13 +50,13 @@ class MazePathFinder
      */
     public function nextMove(\stdClass $position, \stdClass $previous)
     {
-        $iter = 1;
-        $pos = $position;
-
         $dir = Direction::computeDirection($position, $previous);
         if (!$dir) {
             $dir = Direction::computeDirection($this->goal, $position);
         }
+
+        $pos = clone $position;
+        $iter = 1;
 
         do {
             if ($this->maze[$pos->y][$pos->x] == 0) {
@@ -64,33 +64,50 @@ class MazePathFinder
             }
 
             $dir = $this->findNextMove($pos, $dir);
-
             $pos = $this->nextPosition($pos, $dir);
 
-            for ($y = 0; $y < $this->height; ++$y) {
-                for ($x = 0; $x < $this->width; ++$x) {
-                    if ($y == $this->goal->y && $x == $this->goal->x) {
-                        echo '{} ';
-                    } elseif ($y == 0 || $y == $this->height - 1) {
-                        echo '## ';
-                    } elseif ($x == 0 || $x == $this->width - 1) {
-                        echo '## ';
-                    } elseif ($this->maze[$y][$x] == -1) {
-                        echo '## ';
-                    } elseif ($this->maze[$y][$x] == -2) {
-                        echo '** ';
-                    } elseif ($this->maze[$y][$x] > 0) {
-                        echo sprintf('%02d ', $this->maze[$y][$x]);
-                    } else {
-                        echo '   ';
-                    }
-                }
-                echo PHP_EOL;
-            }
-Usleep(250000);echo PHP_EOL;
-        } while ($dir && ($pos->y != $this->goal->y || $pos->x != $this->goal->x));
+//            for ($y = 0; $y < $this->height; ++$y) {
+//                for ($x = 0; $x < $this->width; ++$x) {
+//                    if ($y == $this->goal->y && $x == $this->goal->x) {
+//                        echo '{} ';
+//                    } elseif ($y == 0 || $y == $this->height - 1) {
+//                        echo '## ';
+//                    } elseif ($x == 0 || $x == $this->width - 1) {
+//                        echo '## ';
+//                    } elseif ($this->maze[$y][$x] == -1) {
+//                        echo '## ';
+//                    } elseif ($this->maze[$y][$x] == -2) {
+//                        echo '** ';
+//                    } elseif ($this->maze[$y][$x] > 0) {
+//                        echo sprintf('%02d ', $this->maze[$y][$x]);
+//                    } else {
+//                        echo '   ';
+//                    }
+//                }
+//                echo PHP_EOL;
+//            }
+//            usleep(250000);echo PHP_EOL;
+        } while ($dir != null && ($pos->y != $this->goal->y || $pos->x != $this->goal->x));
 
-        return Direction::UP;
+        $moves = array();
+        $directions = Direction::getDirectionsArray();
+        foreach ($directions as $dir) {
+            $pos = $this->nextPosition($position, $dir);
+            if ($this->isValidPosition($pos)) {
+                $content = $this->maze[$pos->y][$pos->x];
+                if ($content > 0) {
+                    $moves[$content] = $dir;
+                }
+            }
+        }
+
+        if (empty($moves)) {
+            return Direction::STOPPED;
+        }
+
+        ksort($moves, SORT_NUMERIC);
+        return reset($moves);
+
     }
 
     /**
