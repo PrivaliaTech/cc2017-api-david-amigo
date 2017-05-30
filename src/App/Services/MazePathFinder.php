@@ -74,7 +74,10 @@ class MazePathFinder
         $directions = Direction::getDirectionsArray();
         foreach ($directions as $dir) {
             $pos = $this->nextPosition($position, $dir);
-            if ($this->isValidPosition($pos)) {
+            if ($pos->y == $this->goal->y
+                && $pos->x == $this->goal->x) {
+                return $dir;
+            } elseif ($this->isValidPosition($pos)) {
                 $content = $this->maze[$pos->y][$pos->x];
                 if ($content > 0) {
                     $moves[$content] = $dir;
@@ -88,6 +91,36 @@ class MazePathFinder
 
         ksort($moves, SORT_NUMERIC);
         return reset($moves);
+    }
+
+    /**
+     * Computes the next position
+     *
+     * @param \stdClass $pos
+     * @param string    $dir
+     * @return \stdClass
+     */
+    public function nextPosition(\stdClass $pos, $dir)
+    {
+        $new = clone $pos;
+        switch ($dir) {
+            case Direction::UP:
+                --$new->y;
+                break;
+
+            case Direction::DOWN:
+                ++$new->y;
+                break;
+
+            case Direction::LEFT:
+                --$new->x;
+                break;
+
+            case Direction::RIGHT:
+                ++$new->x;
+                break;
+        }
+        return $new;
     }
 
     /**
@@ -109,7 +142,7 @@ class MazePathFinder
                 } elseif ($this->maze[$y][$x] == -1) {
                     $result .= '## ';
                 } elseif ($this->maze[$y][$x] == -2) {
-                    $result .= '** ';
+                    $result .= '.. ';
                 } elseif ($this->maze[$y][$x] > 0) {
                     $result .= sprintf('%02d ', $this->maze[$y][$x]);
                 } else {
@@ -248,35 +281,5 @@ class MazePathFinder
         }
 
         return true;
-    }
-
-    /**
-     * Computes the next position
-     *
-     * @param \stdClass $pos
-     * @param string    $dir
-     * @return \stdClass
-     */
-    private function nextPosition(\stdClass $pos, $dir)
-    {
-        $new = clone $pos;
-        switch ($dir) {
-            case Direction::UP:
-                --$new->y;
-                break;
-
-            case Direction::DOWN:
-                ++$new->y;
-                break;
-
-            case Direction::LEFT:
-                --$new->x;
-                break;
-
-            case Direction::RIGHT:
-                ++$new->x;
-                break;
-        }
-        return $new;
     }
 }

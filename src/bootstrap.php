@@ -1,17 +1,14 @@
 <?php
 
-use App\Services\Direction;
 use App\Services\GameConditions;
+use App\Services\LocalStorage;
 use App\Services\MazePathFinder;
+use App\Services\SessionData;
 use Silex\Application;
-use Silex\Provider\SessionServiceProvider;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\Session;
 
 $app = new Application();
-
-$app->register(new SessionServiceProvider());
 
 $app->match('/name', function () use ($app) {
     return new JsonResponse(array(
@@ -35,10 +32,14 @@ $app->match('/move', function (Request $request) use ($app) {
     $goal = $data->goal();
     $ghosts = $data->ghosts();
 
-    /** @var Session $session */
-    $session = $app['session'];
-    $maze = $session->get($uuid, null);
-    if (!$maze) {
+    $session = new SessionData(
+        LocalStorage::readData($uuid)
+    );
+
+    $maze = $session->maze();
+    $yPos = $session->yPos();
+    $xPos = $session->xPos();
+    if (empty($maze) || $yPos != $pos->y || $xPos != $pos->x) {
         $maze = array();
         for ($y = 0; $y < $height; ++$y) {
             $maze[$y] = array();
@@ -53,17 +54,16 @@ $app->match('/move', function (Request $request) use ($app) {
         $maze[$wall->y][$wall->x] = -1;
     }
 
-    $session->set($uuid, $maze);
-
-    // Compute current direction
-    $dir = Direction::computeDirection($pos, $prev);
-
     $finder = new MazePathFinder($maze, $height, $width, $goal);
     $move = $finder->nextMove($pos, $prev);
+    $pos = $finder->nextPosition($pos, $move);
+
+    $session->init($maze, $pos->y, $pos->x);
+    LocalStorage::writeData($uuid, $session->encode());
 
     return new JsonResponse(array(
         'move' => $move,
-        'debug' => $finder->printMaze()
+        'debug' => $finder->printMaze(),
     ));
 });
 
