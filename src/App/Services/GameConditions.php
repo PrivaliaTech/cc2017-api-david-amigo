@@ -53,6 +53,14 @@ class GameConditions
     }
 
     /**
+     * @return \stdClass
+     */
+    public function area()
+    {
+        return $this->data->player->area;
+    }
+
+    /**
      * @return array
      */
     public function walls()

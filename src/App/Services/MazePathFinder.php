@@ -21,6 +21,9 @@ class MazePathFinder
     /** @var \stdClass */
     private $goal;
 
+    /** @var int */
+    private $iter;
+
     /**
      * MazePathFinder constructor.
      * @param array     $maze
@@ -38,6 +41,7 @@ class MazePathFinder
         $this->height = $height;
         $this->width = $width;
         $this->goal = $goal;
+        $this->iter = 0;
     }
 
 
@@ -45,35 +49,38 @@ class MazePathFinder
      * Find the next movement
      *
      * @param \stdClass $position
-     * @param \stdClass $previous
+     * @param \int      $direction
      * @return string Next move: up, down, left, right
      */
-    public function nextMove(\stdClass $position, \stdClass $previous)
+    public function nextMove(\stdClass $position, $direction)
     {
-        $dir = Direction::computeDirection($position, $previous);
-        if (!$dir) {
-            $dir = Direction::computeDirection($this->goal, $position);
-        }
-
         $pos = clone $position;
-        $iter = 1;
+        $dir = $direction;
+        $this->iter = 1;
 
-        do {
-            if ($this->maze[$pos->y][$pos->x] == 0) {
-                $this->maze[$pos->y][$pos->x] = $iter++;
+        while (1) {
+            $dir = $this->findNextMove($pos, $dir);
+            if ($dir == null) {
+                break;
             }
 
-            $dir = $this->findNextMove($pos, $dir);
-            $pos = $this->nextPosition($pos, $dir);
+            $pos = Direction::nextPosition($pos, $dir);
+            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
+                break;
+            }
+
+            if ($pos->y == $this->goal->y && $pos->x == $this->goal->x) {
+                break;
+            }
 
 //            echo $this->printMaze();
 //            usleep(250000);echo PHP_EOL;
-        } while ($dir != null && ($pos->y != $this->goal->y || $pos->x != $this->goal->x));
+        }
 
         $moves = array();
         $directions = Direction::getDirectionsArray();
         foreach ($directions as $dir) {
-            $pos = $this->nextPosition($position, $dir);
+            $pos = Direction::nextPosition($position, $dir);
             if ($pos->y == $this->goal->y
                 && $pos->x == $this->goal->x) {
                 return $dir;
@@ -90,37 +97,8 @@ class MazePathFinder
         }
 
         ksort($moves, SORT_NUMERIC);
+        $moves = array_reverse($moves);
         return reset($moves);
-    }
-
-    /**
-     * Computes the next position
-     *
-     * @param \stdClass $pos
-     * @param string    $dir
-     * @return \stdClass
-     */
-    public function nextPosition(\stdClass $pos, $dir)
-    {
-        $new = clone $pos;
-        switch ($dir) {
-            case Direction::UP:
-                --$new->y;
-                break;
-
-            case Direction::DOWN:
-                ++$new->y;
-                break;
-
-            case Direction::LEFT:
-                --$new->x;
-                break;
-
-            case Direction::RIGHT:
-                ++$new->x;
-                break;
-        }
-        return $new;
     }
 
     /**
@@ -139,9 +117,11 @@ class MazePathFinder
                     $result .= ' ##';
                 } elseif ($x == 0 || $x == $this->width - 1) {
                     $result .= ' ##';
-                } elseif ($this->maze[$y][$x] == -1) {
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_WALL) {
                     $result .= ' ##';
-                } elseif ($this->maze[$y][$x] == -2) {
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_VISITED) {
+                    $result .= ' **';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_HIDDEN) {
                     $result .= ' ..';
                 } elseif ($this->maze[$y][$x] > 0) {
                     $result .= sprintf('%3d', $this->maze[$y][$x]);
@@ -155,6 +135,16 @@ class MazePathFinder
     }
 
     /**
+     * Get max iterations
+     *
+     * @return int
+     */
+    public function getMaxIter()
+    {
+        return $this->iter;
+    }
+
+    /**
      * Computes the next movement
      *
      * @param \stdClass $pos
@@ -163,6 +153,10 @@ class MazePathFinder
      */
     private function findNextMove(\stdClass $pos, $dir)
     {
+        if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_EMPTY) {
+            $this->maze[$pos->y][$pos->x] = $this->iter++;
+        }
+
         // Array of movements
         $moves = Direction::getDirectionsArray();
 
@@ -171,10 +165,10 @@ class MazePathFinder
         $leftDir = $moves[(array_search($dir, $moves) + 3) % 4];
         $backDir = $moves[(array_search($dir, $moves) + 2) % 4];
 
-        $forwardPos = $this->nextPosition($pos, $forwardDir);
-        $rightPos = $this->nextPosition($pos, $rightDir);
-        $leftPos = $this->nextPosition($pos, $leftDir);
-        $backPos = $this->nextPosition($pos, $backDir);
+        $forwardPos = Direction::nextPosition($pos, $forwardDir);
+        $rightPos = Direction::nextPosition($pos, $rightDir);
+        $leftPos = Direction::nextPosition($pos, $leftDir);
+        $backPos = Direction::nextPosition($pos, $backDir);
 
         // If the goal is at a side, move to it
         if ($forwardPos->y == $this->goal->y && $forwardPos->x == $this->goal->x) {
@@ -212,7 +206,8 @@ class MazePathFinder
         $moves = array();
 
         $currentContent = $this->maze[$pos->y][$pos->x];
-        $this->maze[$pos->y][$pos->x] = -2;
+        $this->iter = $this->maze[$pos->y][$pos->x];
+        $this->maze[$pos->y][$pos->x] = CellType::TYPE_VISITED;
 
         if ($this->isValidPosition($forwardPos)) {
             $forwardContent = $this->maze[$forwardPos->y][$forwardPos->x];
@@ -272,11 +267,12 @@ class MazePathFinder
             return false;
         }
 
-        if ($this->maze[$pos->y][$pos->x] < 0) {
+        if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_VISITED
+            || $this->maze[$pos->y][$pos->x] == CellType::TYPE_WALL) {
             return false;
         }
 
-        if ($onlyEmpty && $this->maze[$pos->y][$pos->x] != 0) {
+        if ($onlyEmpty && $this->maze[$pos->y][$pos->x] > 0) {
             return false;
         }
 

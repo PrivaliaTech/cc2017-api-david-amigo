@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\CellType;
+use App\Services\Direction;
 use App\Services\GameConditions;
 use App\Services\LocalStorage;
 use App\Services\MazePathFinder;
@@ -29,37 +31,64 @@ $app->match('/move', function (Request $request) use ($app) {
     $pos = $data->position();
     $prev = $data->previous();
     $walls = $data->walls();
+    $area = $data->area();
     $height = $data->height();
     $width = $data->width();
     $goal = $data->goal();
     $ghosts = $data->ghosts();
 
+    // Read data from session
     $session = new SessionData(
         LocalStorage::readData($uuid)
     );
-
     $maze = $session->maze();
     $yPos = $session->yPos();
     $xPos = $session->xPos();
+
+    // Create the maze
     if (empty($maze) || $yPos != $pos->y || $xPos != $pos->x) {
         $maze = array();
         for ($y = 0; $y < $height; ++$y) {
             $maze[$y] = array();
             for ($x = 0; $x < $width; ++$x) {
-                $maze[$y][$x] = 0;
+                $maze[$y][$x] = CellType::TYPE_HIDDEN;
+            }
+        }
+    }
+
+    // Discover the maze (visible area)
+    for ($y = $area->y1; $y <= $area->y2; $y++) {
+        for ($x = $area->x1; $x <= $area->x2; $x++) {
+            if ($maze[$y][$x] == CellType::TYPE_HIDDEN) {
+                $maze[$y][$x] = CellType::TYPE_EMPTY;
             }
         }
     }
 
     // Add visible walls to the maze
     foreach ($walls as $wall) {
-        $maze[$wall->y][$wall->x] = -1;
+        $maze[$wall->y][$wall->x] = CellType::TYPE_WALL;
     }
 
-    $finder = new MazePathFinder($maze, $height, $width, $goal);
-    $move = $finder->nextMove($pos, $prev);
-    $pos = $finder->nextPosition($pos, $move);
+    $maxIter = -1;
+    $move = Direction::STOPPED;
+    $printedMaze = null;
+    $directions = Direction::getDirectionsArray();
+    foreach ($directions as $dir) {
+        $pos = Direction::nextPosition($pos, $dir);
+        if ($maze[$pos->y][$pos->x] == CellType::TYPE_EMPTY) {
+            $finder = new MazePathFinder($maze, $height, $width, $goal);
+            $finder->nextMove($pos, $dir);
+            $iter = $finder->getMaxIter();
+            if ($maxIter < 0 || $iter < $maxIter) {
+                $printedMaze = $finder->printMaze();
+                $maxIter = $iter;
+                $move = $dir;
+            }
+        }
+    }
 
+    $pos = Direction::nextPosition($pos, $move);
     $session->init($maze, $pos->y, $pos->x);
     LocalStorage::writeData($uuid, $session->encode());
 
@@ -67,7 +96,7 @@ $app->match('/move', function (Request $request) use ($app) {
 
     return new JsonResponse(array(
         'move' => $move,
-        'debug' => $finder->printMaze(),
+        'debug' => $printedMaze,
         'time' => sprintf('%.8f', $time)
     ));
 });
