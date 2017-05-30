@@ -18,6 +18,8 @@ $app->match('/name', function () use ($app) {
 });
 
 $app->match('/move', function (Request $request) use ($app) {
+    $time = microtime(true);
+
     // Get the data form the request
     $body = $request->getContent();
     $data = new GameConditions($body);
@@ -61,9 +63,12 @@ $app->match('/move', function (Request $request) use ($app) {
     $session->init($maze, $pos->y, $pos->x);
     LocalStorage::writeData($uuid, $session->encode());
 
+    $time = microtime(true) - $time;
+
     return new JsonResponse(array(
         'move' => $move,
         'debug' => $finder->printMaze(),
+        'time' => sprintf('%.8f', $time)
     ));
 });
 

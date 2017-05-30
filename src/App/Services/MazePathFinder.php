@@ -134,17 +134,17 @@ class MazePathFinder
         for ($y = 0; $y < $this->height; ++$y) {
             for ($x = 0; $x < $this->width; ++$x) {
                 if ($y == $this->goal->y && $x == $this->goal->x) {
-                    $result .= '{} ';
+                    $result .= ' {}';
                 } elseif ($y == 0 || $y == $this->height - 1) {
-                    $result .= '## ';
+                    $result .= ' ##';
                 } elseif ($x == 0 || $x == $this->width - 1) {
-                    $result .= '## ';
+                    $result .= ' ##';
                 } elseif ($this->maze[$y][$x] == -1) {
-                    $result .= '## ';
+                    $result .= ' ##';
                 } elseif ($this->maze[$y][$x] == -2) {
-                    $result .= '.. ';
+                    $result .= ' ..';
                 } elseif ($this->maze[$y][$x] > 0) {
-                    $result .= sprintf('%02d ', $this->maze[$y][$x]);
+                    $result .= sprintf('%3d', $this->maze[$y][$x]);
                 } else {
                     $result .= '   ';
                 }
