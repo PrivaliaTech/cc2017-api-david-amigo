@@ -24,36 +24,30 @@ class MazePathFinder
     /** @var int */
     private $iter;
 
+
     /**
-     * MazePathFinder constructor.
+     * Find the next movement
+     *
      * @param array     $maze
      * @param int       $height
      * @param int       $width
      * @param \stdClass $goal
+     * @param \stdClass $position
+     * @param int       $direction
+     * @return string Next move: up, down, left, right
      */
-    public function __construct(
+    public function findPath(
         array $maze,
         $height,
         $width,
-        \stdClass $goal
+        \stdClass $goal,
+        \stdClass $position,
+        $direction
     ) {
         $this->maze = $maze;
         $this->height = $height;
         $this->width = $width;
         $this->goal = $goal;
-        $this->iter = 0;
-    }
-
-
-    /**
-     * Find the next movement
-     *
-     * @param \stdClass $position
-     * @param \int      $direction
-     * @return string Next move: up, down, left, right
-     */
-    public function nextMove(\stdClass $position, $direction)
-    {
         $pos = clone $position;
         $dir = $direction;
         $this->iter = 1;
@@ -61,44 +55,19 @@ class MazePathFinder
         while (1) {
             $dir = $this->findNextMove($pos, $dir);
             if ($dir == null) {
-                break;
+                return 0;
             }
 
             $pos = Direction::nextPosition($pos, $dir);
-            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
-                break;
-            }
-
             if ($pos->y == $this->goal->y && $pos->x == $this->goal->x) {
-                break;
+                return $this->iter;
             }
 
-//            echo $this->printMaze();
-//            usleep(250000);echo PHP_EOL;
-        }
-
-        $moves = array();
-        $directions = Direction::getDirectionsArray();
-        foreach ($directions as $dir) {
-            $pos = Direction::nextPosition($position, $dir);
-            if ($pos->y == $this->goal->y
-                && $pos->x == $this->goal->x) {
-                return $dir;
-            } elseif ($this->isValidPosition($pos)) {
-                $content = $this->maze[$pos->y][$pos->x];
-                if ($content > 0) {
-                    $moves[$content] = $dir;
-                }
+            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
+                return $this->iter;
             }
         }
-
-        if (empty($moves)) {
-            return Direction::STOPPED;
-        }
-
-        ksort($moves, SORT_NUMERIC);
-        $moves = array_reverse($moves);
-        return reset($moves);
+        return 0;
     }
 
     /**
@@ -123,6 +92,8 @@ class MazePathFinder
                     $result .= ' **';
                 } elseif ($this->maze[$y][$x] == CellType::TYPE_HIDDEN) {
                     $result .= ' ..';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_IN_PATH) {
+                    $result .= ' PP';
                 } elseif ($this->maze[$y][$x] > 0) {
                     $result .= sprintf('%3d', $this->maze[$y][$x]);
                 } else {
@@ -139,7 +110,7 @@ class MazePathFinder
      *
      * @return int
      */
-    public function getMaxIter()
+    public function getIter()
     {
         return $this->iter;
     }
@@ -153,7 +124,7 @@ class MazePathFinder
      */
     private function findNextMove(\stdClass $pos, $dir)
     {
-        if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_EMPTY) {
+        if (in_array($this->maze[$pos->y][$pos->x], array(CellType::TYPE_EMPTY, CellType::TYPE_HIDDEN))) {
             $this->maze[$pos->y][$pos->x] = $this->iter++;
         }
 
@@ -206,7 +177,6 @@ class MazePathFinder
         $moves = array();
 
         $currentContent = $this->maze[$pos->y][$pos->x];
-        $this->iter = $this->maze[$pos->y][$pos->x];
         $this->maze[$pos->y][$pos->x] = CellType::TYPE_VISITED;
 
         if ($this->isValidPosition($forwardPos)) {

@@ -54,8 +54,8 @@ class SessionData
 
     /**
      * @param array $maze
-     * @param int $yPos
-     * @param int $xPos
+     * @param int   $yPos
+     * @param int   $xPos
      * @return $this
      */
     public function init(array $maze = array(), $yPos = -1, $xPos = -1)

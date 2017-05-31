@@ -41,6 +41,7 @@ $app->match('/move', function (Request $request) use ($app) {
     $session = new SessionData(
         LocalStorage::readData($uuid)
     );
+
     $maze = $session->maze();
     $yPos = $session->yPos();
     $xPos = $session->xPos();
@@ -70,25 +71,49 @@ $app->match('/move', function (Request $request) use ($app) {
         $maze[$wall->y][$wall->x] = CellType::TYPE_WALL;
     }
 
-    $maxIter = -1;
+    $finder = new MazePathFinder();
     $move = Direction::STOPPED;
     $printedMaze = null;
+    $maxIter = -1;
+
     $directions = Direction::getDirectionsArray();
     foreach ($directions as $dir) {
-        $pos = Direction::nextPosition($pos, $dir);
-        if ($maze[$pos->y][$pos->x] == CellType::TYPE_EMPTY) {
-            $finder = new MazePathFinder($maze, $height, $width, $goal);
-            $finder->nextMove($pos, $dir);
-            $iter = $finder->getMaxIter();
-            if ($maxIter < 0 || $iter < $maxIter) {
-                $printedMaze = $finder->printMaze();
-                $maxIter = $iter;
+        $new = Direction::nextPosition($pos, $dir);
+        if ($maze[$new->y][$new->x] == CellType::TYPE_EMPTY) {
+            $totalIter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
+            $printedMaze[] = $finder->printMaze();
+            if ($totalIter > 0 && $maxIter < 0 || $totalIter < $maxIter) {
+                $maxIter = $totalIter;
                 $move = $dir;
             }
         }
     }
 
+    if ($maxIter < 0) {
+        for ($y = 0; $y < $height; ++$y) {
+            for ($x = 0; $x < $width; ++$x) {
+                if ($maze[$y][$x] == CellType::TYPE_IN_PATH) {
+                    $maze[$y][$x] = CellType::TYPE_EMPTY;
+                }
+            }
+        }
+
+        foreach ($directions as $dir) {
+            $new = Direction::nextPosition($pos, $dir);
+            if ($maze[$new->y][$new->x] == CellType::TYPE_EMPTY) {
+                $totalIter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
+                $printedMaze[] = $finder->printMaze();
+                if ($maxIter < 0 || $totalIter < $maxIter) {
+                    $maxIter = $totalIter;
+                    $move = $dir;
+                }
+            }
+        }
+    }
+
+    $maze[$pos->y][$pos->x] = CellType::TYPE_IN_PATH;
     $pos = Direction::nextPosition($pos, $move);
+
     $session->init($maze, $pos->y, $pos->x);
     LocalStorage::writeData($uuid, $session->encode());
 
