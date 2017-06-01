@@ -3,6 +3,7 @@
 use App\Services\CellType;
 use App\Services\Direction;
 use App\Services\GameConditions;
+use App\Services\GhostDetector;
 use App\Services\LocalStorage;
 use App\Services\MazePathFinder;
 use App\Services\SessionData;
@@ -72,6 +73,7 @@ $app->match('/move', function (Request $request) use ($app) {
     }
 
     $finder = new MazePathFinder();
+    $detector = new GhostDetector();
 
     // Locate valid movements
     $moves = array();
@@ -79,12 +81,14 @@ $app->match('/move', function (Request $request) use ($app) {
     foreach ($directions as $dir) {
         $newPos = Direction::nextPosition($pos, $dir);
         $cell = $maze[$newPos->y][$newPos->x];
+        $alert = $detector->ghostAlert($newPos, $ghosts);
         if (CellType::isEmpty($cell, true)) {
             $moves[$dir] = array(
-                'pos' => $newPos,
-                'cell' => $cell,
-                'iter' => -1,
-                'maze' => null
+                'pos'   => $newPos,
+                'cell'  => $cell,
+                'alert' => $alert,
+                'iter'  => -1,
+                'maze'  => null
             );
         }
     }
@@ -125,13 +129,22 @@ $app->match('/move', function (Request $request) use ($app) {
         }
     }
 
-    // Find more optimized movement
+    // Find more optimized movement (without ghosts)
     $minIter = PHP_INT_MAX;
     $move = Direction::STOPPED;
     foreach ($moves as $dir => $data) {
-        if ($data['iter'] > 0 && $data['iter'] < $minIter) {
+        if ($data['alert'] == 0 && $data['iter'] > 0 && $data['iter'] < $minIter) {
             $minIter = $data['iter'];
             $move = $dir;
+        }
+    }
+
+    // Escape from the ghosts
+    if ($move == Direction::STOPPED){
+        foreach ($moves as $dir => $data) {
+            if ($data['alert'] == 0 || ($data['alert'] == 1 && $move == Direction::STOPPED)) {
+                $move = $dir;
+            }
         }
     }
 
