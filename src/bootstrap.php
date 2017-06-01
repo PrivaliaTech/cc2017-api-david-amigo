@@ -72,24 +72,38 @@ $app->match('/move', function (Request $request) use ($app) {
     }
 
     $finder = new MazePathFinder();
-    $move = Direction::STOPPED;
-    $printedMaze = null;
-    $maxIter = -1;
 
+    // Locate valid movements
+    $moves = array();
     $directions = Direction::getDirectionsArray();
     foreach ($directions as $dir) {
-        $new = Direction::nextPosition($pos, $dir);
-        if ($maze[$new->y][$new->x] == CellType::TYPE_EMPTY) {
-            $totalIter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
-            $printedMaze[] = $finder->printMaze();
-            if ($totalIter > 0 && $maxIter < 0 || $totalIter < $maxIter) {
-                $maxIter = $totalIter;
-                $move = $dir;
+        $newPos = Direction::nextPosition($pos, $dir);
+        $cell = $maze[$newPos->y][$newPos->x];
+        if (CellType::isEmpty($cell, true)) {
+            $moves[$dir] = array(
+                'pos' => $newPos,
+                'cell' => $cell,
+                'iter' => -1,
+                'maze' => null
+            );
+        }
+    }
+
+    // Try to move (only to unvisited cells)
+    $count = 0;
+    foreach ($moves as $dir => $data) {
+        if (CellType::isEmpty($data['cell'])) {
+            $iter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
+            $moves[$dir]['iter']= $iter;
+            if ($iter) {
+                $moves[$dir]['maze'] = $finder->printMaze();
+                ++$count;
             }
         }
     }
 
-    if ($maxIter < 0) {
+    if (!$count) {
+        // Clear saved path to re-start
         for ($y = 0; $y < $height; ++$y) {
             for ($x = 0; $x < $width; ++$x) {
                 if ($maze[$y][$x] == CellType::TYPE_IN_PATH) {
@@ -98,22 +112,34 @@ $app->match('/move', function (Request $request) use ($app) {
             }
         }
 
-        foreach ($directions as $dir) {
-            $new = Direction::nextPosition($pos, $dir);
-            if ($maze[$new->y][$new->x] == CellType::TYPE_EMPTY) {
-                $totalIter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
-                $printedMaze[] = $finder->printMaze();
-                if ($maxIter < 0 || $totalIter < $maxIter) {
-                    $maxIter = $totalIter;
-                    $move = $dir;
-                }
+        // Try to move (all cells are valid)
+        foreach ($moves as $dir => $data) {
+            $iter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
+            $moves[$dir]['iter']= $iter;
+            if ($iter) {
+                $moves[$dir]['maze'] = null;
+            } else {
+                $moves[$dir]['maze'] = $finder->printMaze();
+                ++$count;
             }
         }
     }
 
-    $maze[$pos->y][$pos->x] = CellType::TYPE_IN_PATH;
-    $pos = Direction::nextPosition($pos, $move);
+    // Find more optimized movement
+    $minIter = PHP_INT_MAX;
+    $move = Direction::STOPPED;
+    foreach ($moves as $dir => $data) {
+        if ($data['iter'] > 0 && $data['iter'] < $minIter) {
+            $minIter = $data['iter'];
+            $move = $dir;
+        }
+    }
 
+    // Mark position as visited as checked
+    $maze[$pos->y][$pos->x] = CellType::TYPE_IN_PATH;
+
+    // Save session data
+    $pos = $moves[$move]['pos'];
     $session->init($maze, $pos->y, $pos->x);
     LocalStorage::writeData($uuid, $session->encode());
 
@@ -121,7 +147,7 @@ $app->match('/move', function (Request $request) use ($app) {
 
     return new JsonResponse(array(
         'move' => $move,
-        'debug' => $printedMaze,
+        'maze' => $moves,
         'time' => sprintf('%.8f', $time)
     ));
 });
