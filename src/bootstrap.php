@@ -152,8 +152,8 @@ $app->match('/move', function (Request $request) use ($app) {
     $maze[$pos->y][$pos->x] = CellType::TYPE_IN_PATH;
 
     // Save session data
-    $pos = $moves[$move]['pos'];
-    $session->init($maze, $pos->y, $pos->x);
+    $newPos = $moves[$move]['pos'];
+    $session->init($maze, $newPos->y, $newPos->x);
     LocalStorage::writeData($uuid, $session->encode());
 
     $time = microtime(true) - $time;

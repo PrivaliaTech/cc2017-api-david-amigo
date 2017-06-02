@@ -25,8 +25,8 @@ class GhostDetector
                 return 2;
             }
             foreach ($directions as $dir) {
-                $new = Direction::nextPosition($ghost, $dir);
-                if ($new->y == $ghost->y && $new->x == $ghost->x) {
+                $newPos = Direction::nextPosition($ghost, $dir);
+                if ($pos->y == $newPos->y && $pos->x == $newPos->x) {
                     $level = 1;
                 }
             }

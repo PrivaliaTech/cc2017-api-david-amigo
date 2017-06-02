@@ -63,9 +63,9 @@ class MazePathFinder
                 return $this->iter;
             }
 
-            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
-                return $this->iter;
-            }
+//            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
+//                return $this->iter;
+//            }
         }
         return 0;
     }
