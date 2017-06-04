@@ -5,7 +5,8 @@ use App\Services\Direction;
 use App\Services\GameConditions;
 use App\Services\GhostDetector;
 use App\Services\LocalStorage;
-use App\Services\MazePathFinder;
+use App\Services\MovementDecider;
+use App\Services\PathFinder;
 use App\Services\SessionData;
 use Silex\Application;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -72,62 +73,24 @@ $app->match('/move', function (Request $request) use ($app) {
         $maze[$wall->y][$wall->x] = CellType::TYPE_WALL;
     }
 
-    $finder = new MazePathFinder();
-    $detector = new GhostDetector();
+    $pathFinder = new PathFinder();
+    $ghostDetector = new GhostDetector();
+    $movementDecider = new MovementDecider(
+        $pathFinder,
+        $ghostDetector
+    );
 
     // Locate valid movements
-    $moves = array();
-    $directions = Direction::getDirectionsArray();
-    foreach ($directions as $dir) {
-        $newPos = Direction::nextPosition($pos, $dir);
-        $cell = $maze[$newPos->y][$newPos->x];
-        $alert = $detector->ghostAlert($newPos, $ghosts);
-        if (CellType::isEmpty($cell, true)) {
-            $moves[$dir] = array(
-                'pos'   => $newPos,
-                'cell'  => $cell,
-                'alert' => $alert,
-                'iter'  => -1,
-                'maze'  => null
-            );
-        }
-    }
+    $moves = $movementDecider->getMovements(
+        $maze,
+        $ghosts,
+        $height,
+        $width,
+        $goal,
+        $pos
+    );
 
-    // Try to move (only to unvisited cells)
-    $count = 0;
-    foreach ($moves as $dir => $data) {
-        if (CellType::isEmpty($data['cell'])) {
-            $iter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
-            $moves[$dir]['iter']= $iter;
-            if ($iter) {
-                $moves[$dir]['maze'] = $finder->printMaze();
-                ++$count;
-            }
-        }
-    }
-
-    if (!$count) {
-        // Clear saved path to re-start
-        for ($y = 0; $y < $height; ++$y) {
-            for ($x = 0; $x < $width; ++$x) {
-                if ($maze[$y][$x] == CellType::TYPE_IN_PATH) {
-                    $maze[$y][$x] = CellType::TYPE_EMPTY;
-                }
-            }
-        }
-
-        // Try to move (all cells are valid)
-        foreach ($moves as $dir => $data) {
-            $iter = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
-            $moves[$dir]['iter']= $iter;
-            if ($iter) {
-                $moves[$dir]['maze'] = null;
-            } else {
-                $moves[$dir]['maze'] = $finder->printMaze();
-                ++$count;
-            }
-        }
-    }
+    $maze = $movementDecider->getMaze();
 
     // Find more optimized movement (without ghosts)
     $minIter = PHP_INT_MAX;

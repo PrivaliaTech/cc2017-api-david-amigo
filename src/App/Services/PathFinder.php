@@ -7,7 +7,7 @@ namespace App\Services;
  *
  * @package App\Services
  */
-class MazePathFinder
+class PathFinder
 {
     /** @var array */
     private $maze;
@@ -23,7 +23,6 @@ class MazePathFinder
 
     /** @var int */
     private $iter;
-
 
     /**
      * Find the next movement
@@ -77,7 +76,7 @@ class MazePathFinder
      */
     public function printMaze()
     {
-        $result = '';
+        $result = PHP_EOL . PHP_EOL;
         for ($y = 0; $y < $this->height; ++$y) {
             for ($x = 0; $x < $this->width; ++$x) {
                 if ($y == $this->goal->y && $x == $this->goal->x) {
@@ -102,17 +101,8 @@ class MazePathFinder
             }
             $result .= PHP_EOL;
         }
+        $result .= PHP_EOL;
         return $result;
-    }
-
-    /**
-     * Get max iterations
-     *
-     * @return int
-     */
-    public function getIter()
-    {
-        return $this->iter;
     }
 
     /**
