@@ -31,7 +31,7 @@ $app->match('/move', function (Request $request) use ($app) {
     // Extract some vars
     $uuid = $data->uuid();
     $pos = $data->position();
-    $prev = $data->previous();
+//    $prev = $data->previous();
     $walls = $data->walls();
     $area = $data->area();
     $height = $data->height();
@@ -92,7 +92,7 @@ $app->match('/move', function (Request $request) use ($app) {
 
     $maze = $movementDecider->getMaze();
 
-    // Find more optimized movement (without ghosts)
+    // Find most optimized movement (without ghosts)
     $minIter = PHP_INT_MAX;
     $move = Direction::STOPPED;
     foreach ($moves as $dir => $data) {

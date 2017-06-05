@@ -22,18 +22,22 @@ class PathFinder
     private $goal;
 
     /** @var int */
+    private $turns;
+
+    /** @var int */
     private $iter;
 
     /**
      * Find the next movement
      *
-     * @param array     $maze
-     * @param int       $height
-     * @param int       $width
-     * @param \stdClass $goal
-     * @param \stdClass $position
-     * @param int       $direction
-     * @return string Next move: up, down, left, right
+     * @param array     $maze       Maze array (content)
+     * @param int       $height     Height of the maze
+     * @param int       $width      Width of the maze
+     * @param \stdClass $goal       Goal position
+     * @param \stdClass $position   Current position
+     * @param int       $direction  Direction to move
+     * @param int       $turns      Number of turns done
+     * @return int                  Max inters
      */
     public function findPath(
         array $maze,
@@ -41,7 +45,8 @@ class PathFinder
         $width,
         \stdClass $goal,
         \stdClass $position,
-        $direction
+        $direction,
+        $turns = 4
     ) {
         $this->maze = $maze;
         $this->height = $height;
@@ -49,6 +54,7 @@ class PathFinder
         $this->goal = $goal;
         $pos = clone $position;
         $dir = $direction;
+        $this->turns = $turns;
         $this->iter = 1;
 
         while (1) {
@@ -61,10 +67,6 @@ class PathFinder
             if ($pos->y == $this->goal->y && $pos->x == $this->goal->x) {
                 return $this->iter;
             }
-
-//            if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_HIDDEN) {
-//                return $this->iter;
-//            }
         }
         return 0;
     }
@@ -114,7 +116,7 @@ class PathFinder
      */
     private function findNextMove(\stdClass $pos, $dir)
     {
-        if (in_array($this->maze[$pos->y][$pos->x], array(CellType::TYPE_EMPTY, CellType::TYPE_HIDDEN))) {
+        if (CellType::isEmpty($this->maze[$pos->y][$pos->x])) {
             $this->maze[$pos->y][$pos->x] = $this->iter++;
         }
 
@@ -148,18 +150,55 @@ class PathFinder
             return $backDir;
         }
 
+        // Now we can turn right or left or go forward depending on the score
+        $forwardValid = $this->isValidPosition($forwardPos, true);
+        $rightValid = $this->isValidPosition($rightPos, true);
+        $leftValid = $this->isValidPosition($leftPos, true);
+
+        if ($rightValid && $leftValid && $this->turns > 0) {
+            $finder = new PathFinder();
+
+            $rightIters = $finder->findPath(
+                $this->maze,
+                $this->height,
+                $this->width,
+                $this->goal,
+                $pos,
+                $rightDir,
+                $this->turns / 2
+            );
+
+            $leftIters = $finder->findPath(
+                $this->maze,
+                $this->height,
+                $this->width,
+                $this->goal,
+                $pos,
+                $leftDir,
+                $this->turns / 2
+            );
+
+            $this->turns--;
+
+            if ($rightIters > 0 && $rightIters <= $leftIters) {
+                return $rightDir;
+            } elseif ($leftIters > 0) {
+                return $leftDir;
+            }
+        }
+
         // Go forward if possible
-        if ($this->isValidPosition($forwardPos, true)) {
+        if ($forwardValid) {
             return $forwardDir;
         }
 
         // Turn right if possible
-        if ($this->isValidPosition($rightPos, true)) {
+        if ($rightValid) {
             return $rightDir;
         }
 
         // Turn left if possible
-        if ($this->isValidPosition($leftPos, true)) {
+        if ($leftValid) {
             return $leftDir;
         }
 
@@ -167,6 +206,7 @@ class PathFinder
         $moves = array();
 
         $currentContent = $this->maze[$pos->y][$pos->x];
+        $this->iter = $currentContent + 1;
         $this->maze[$pos->y][$pos->x] = CellType::TYPE_VISITED;
 
         if ($this->isValidPosition($forwardPos)) {

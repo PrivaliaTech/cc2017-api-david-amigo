@@ -72,12 +72,12 @@ class MovementDecider
         $count = 0;
         foreach ($moves as $dir => $data) {
             if ($data['pos']->y == $goal->y && $data['pos']->x == $goal->x) {
-                $moves[$dir]['iter']= 1;
+                $moves[$dir]['iter'] = 1;
                 ++$count;
             } elseif (CellType::isEmpty($data['cell'])) {
                 $iter = $this->pathFider->findPath($this->maze, $height, $width, $goal, $pos, $dir);
-                $moves[$dir]['iter']= $iter;
-                if ($iter) {
+                $moves[$dir]['iter'] = $iter;
+                if ($iter > 0) {
                     $moves[$dir]['maze'] = $this->pathFider->printMaze();
                     ++$count;
                 }
@@ -96,13 +96,14 @@ class MovementDecider
 
             // Try to move (all cells are valid)
             foreach ($moves as $dir => $data) {
-                $iter = $this->pathFider->findPath($maze, $height, $width, $goal, $pos, $dir);
-                $moves[$dir]['iter']= $iter;
-                if ($iter) {
-                    $moves[$dir]['maze'] = null;
-                } else {
+                $iter = $this->pathFider->findPath($this->maze, $height, $width, $goal, $pos, $dir);
+                $moves[$dir]['cell'] = CellType::TYPE_EMPTY;
+                $moves[$dir]['iter'] = $iter;
+                if ($iter > 0) {
                     $moves[$dir]['maze'] = $this->pathFider->printMaze();
                     ++$count;
+                } else {
+                    $moves[$dir]['maze'] = null;
                 }
             }
         }
