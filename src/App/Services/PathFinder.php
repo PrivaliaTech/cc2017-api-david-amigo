@@ -22,9 +22,6 @@ class PathFinder
     private $goal;
 
     /** @var int */
-    private $turns;
-
-    /** @var int */
     private $iter;
 
     /**
@@ -36,7 +33,6 @@ class PathFinder
      * @param \stdClass $goal       Goal position
      * @param \stdClass $position   Current position
      * @param int       $direction  Direction to move
-     * @param int       $turns      Number of turns done
      * @return int                  Max inters
      */
     public function findPath(
@@ -45,8 +41,7 @@ class PathFinder
         $width,
         \stdClass $goal,
         \stdClass $position,
-        $direction,
-        $turns = 4
+        $direction
     ) {
         $this->maze = $maze;
         $this->height = $height;
@@ -54,7 +49,6 @@ class PathFinder
         $this->goal = $goal;
         $pos = clone $position;
         $dir = $direction;
-        $this->turns = $turns;
         $this->iter = 1;
 
         while (1) {
@@ -72,7 +66,7 @@ class PathFinder
     }
 
     /**
-     * Returns the maze in an string in print format
+     * Return the maze in an string in print format
      *
      * @return string
      */
@@ -154,38 +148,6 @@ class PathFinder
         $forwardValid = $this->isValidPosition($forwardPos, true);
         $rightValid = $this->isValidPosition($rightPos, true);
         $leftValid = $this->isValidPosition($leftPos, true);
-
-        if ($rightValid && $leftValid && $this->turns > 0) {
-            $finder = new PathFinder();
-
-            $rightIters = $finder->findPath(
-                $this->maze,
-                $this->height,
-                $this->width,
-                $this->goal,
-                $pos,
-                $rightDir,
-                $this->turns / 2
-            );
-
-            $leftIters = $finder->findPath(
-                $this->maze,
-                $this->height,
-                $this->width,
-                $this->goal,
-                $pos,
-                $leftDir,
-                $this->turns / 2
-            );
-
-            $this->turns--;
-
-            if ($rightIters > 0 && $rightIters <= $leftIters) {
-                return $rightDir;
-            } elseif ($leftIters > 0) {
-                return $leftDir;
-            }
-        }
 
         // Go forward if possible
         if ($forwardValid) {
