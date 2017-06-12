@@ -4,7 +4,7 @@ namespace App\Command;
 
 use App\Services\Direction;
 use App\Services\GameConditions;
-use App\Services\MazePathFinder;
+use App\Services\PathFinder;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\LogicException;
 use Symfony\Component\Console\Input\InputInterface;
@@ -56,14 +56,12 @@ class TestAlgorithmCommand extends Command
         $data = new GameConditions($body);
 
         // Extract some vars
-        $uuid = $data->uuid();
         $pos = $data->position();
         $prev = $data->previous();
         $walls = $data->walls();
         $height = $data->height();
         $width = $data->width();
         $goal = $data->goal();
-        $ghosts = $data->ghosts();
 
         $maze = array();
         for ($y = 0; $y < $height; ++$y) {
@@ -77,8 +75,10 @@ class TestAlgorithmCommand extends Command
             $maze[$wall->y][$wall->x] = -1;
         }
 
-        $finder = new MazePathFinder($maze, $height, $width, $goal);
-        $move = $finder->nextMove($pos, $prev);
+        $dir = Direction::computeDirection($pos, $prev);
+
+        $finder = new PathFinder();
+        $move = $finder->findPath($maze, $height, $width, $goal, $pos, $dir);
 
         echo 'Next move: ' . $move . PHP_EOL . PHP_EOL;
 

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exception\HttpException;
+
 /**
  * Class GameConditions
  *
@@ -16,13 +18,13 @@ class GameConditions
      * GameConditions constructor.
      *
      * @param $body
-     * @throws \HttpException
+     * @throws HttpException
      */
     public function __construct($body)
     {
         $this->data = json_decode($body);
-        if (false === $this->data) {
-            throw new \HttpException('Invalid request data!', 400);
+        if (!$this->data) {
+            //throw new HttpException('Invalid request data!', 400);
         }
     }
 
@@ -48,6 +50,14 @@ class GameConditions
     public function width()
     {
         return $this->data->maze->size->width;
+    }
+
+    /**
+     * @return \stdClass
+     */
+    public function area()
+    {
+        return $this->data->player->area;
     }
 
     /**

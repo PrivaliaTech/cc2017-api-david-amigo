@@ -7,7 +7,7 @@ namespace App\Services;
  *
  * @package App\Services
  */
-class MazePathFinder
+class PathFinder
 {
     /** @var array */
     private $maze;
@@ -21,76 +21,84 @@ class MazePathFinder
     /** @var \stdClass */
     private $goal;
 
+    /** @var int */
+    private $iter;
+
     /**
-     * MazePathFinder constructor.
-     * @param array     $maze
-     * @param int       $height
-     * @param int       $width
-     * @param \stdClass $goal
+     * Find the next movement
+     *
+     * @param array     $maze       Maze array (content)
+     * @param int       $height     Height of the maze
+     * @param int       $width      Width of the maze
+     * @param \stdClass $goal       Goal position
+     * @param \stdClass $position   Current position
+     * @param int       $direction  Direction to move
+     * @return int                  Max inters
      */
-    public function __construct(
+    public function findPath(
         array $maze,
         $height,
         $width,
-        \stdClass $goal
+        \stdClass $goal,
+        \stdClass $position,
+        $direction
     ) {
         $this->maze = $maze;
         $this->height = $height;
         $this->width = $width;
         $this->goal = $goal;
+        $pos = clone $position;
+        $dir = $direction;
+        $this->iter = 1;
+
+        while (1) {
+            $dir = $this->findNextMove($pos, $dir);
+            if ($dir == null) {
+                return 0;
+            }
+
+            $pos = Direction::nextPosition($pos, $dir);
+            if ($pos->y == $this->goal->y && $pos->x == $this->goal->x) {
+                return $this->iter;
+            }
+        }
+        return 0;
     }
 
-
     /**
-     * Find the next movement
+     * Return the maze in an string in print format
      *
-     * @param \stdClass $position
-     * @param \stdClass $previous
-     * @return string Next move: up, down, left, right
+     * @return string
      */
-    public function nextMove(\stdClass $position, \stdClass $previous)
+    public function printMaze()
     {
-        $iter = 1;
-        $pos = $position;
-
-        $dir = Direction::computeDirection($position, $previous);
-        if (!$dir) {
-            $dir = Direction::computeDirection($this->goal, $position);
-        }
-
-        do {
-            if ($this->maze[$pos->y][$pos->x] == 0) {
-                $this->maze[$pos->y][$pos->x] = $iter++;
-            }
-
-            $dir = $this->findNextMove($pos, $dir);
-
-            $pos = $this->nextPosition($pos, $dir);
-
-            for ($y = 0; $y < $this->height; ++$y) {
-                for ($x = 0; $x < $this->width; ++$x) {
-                    if ($y == $this->goal->y && $x == $this->goal->x) {
-                        echo '{} ';
-                    } elseif ($y == 0 || $y == $this->height - 1) {
-                        echo '## ';
-                    } elseif ($x == 0 || $x == $this->width - 1) {
-                        echo '## ';
-                    } elseif ($this->maze[$y][$x] == -1) {
-                        echo '## ';
-                    } elseif ($this->maze[$y][$x] == -2) {
-                        echo '** ';
-                    } elseif ($this->maze[$y][$x] > 0) {
-                        echo sprintf('%02d ', $this->maze[$y][$x]);
-                    } else {
-                        echo '   ';
-                    }
+        $result = PHP_EOL . PHP_EOL;
+        for ($y = 0; $y < $this->height; ++$y) {
+            for ($x = 0; $x < $this->width; ++$x) {
+                if ($y == $this->goal->y && $x == $this->goal->x) {
+                    $result .= ' {}';
+                } elseif ($y == 0 || $y == $this->height - 1) {
+                    $result .= ' ##';
+                } elseif ($x == 0 || $x == $this->width - 1) {
+                    $result .= ' ##';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_WALL) {
+                    $result .= ' ##';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_VISITED) {
+                    $result .= ' **';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_HIDDEN) {
+                    $result .= ' ..';
+                } elseif ($this->maze[$y][$x] == CellType::TYPE_IN_PATH) {
+                    $result .= ' PP';
+                } elseif ($this->maze[$y][$x] > 0) {
+                    $result .= sprintf('%3d', $this->maze[$y][$x]);
+                } else {
+                    $result .= '   ';
                 }
-                echo PHP_EOL;
             }
-Usleep(250000);echo PHP_EOL;
-        } while ($dir && ($pos->y != $this->goal->y || $pos->x != $this->goal->x));
-
-        return Direction::UP;
+            $result .= PHP_EOL;
+        }
+        $result .= PHP_EOL;
+        return $result;
     }
 
     /**
@@ -102,6 +110,10 @@ Usleep(250000);echo PHP_EOL;
      */
     private function findNextMove(\stdClass $pos, $dir)
     {
+        if (CellType::isEmpty($this->maze[$pos->y][$pos->x])) {
+            $this->maze[$pos->y][$pos->x] = $this->iter++;
+        }
+
         // Array of movements
         $moves = Direction::getDirectionsArray();
 
@@ -110,10 +122,10 @@ Usleep(250000);echo PHP_EOL;
         $leftDir = $moves[(array_search($dir, $moves) + 3) % 4];
         $backDir = $moves[(array_search($dir, $moves) + 2) % 4];
 
-        $forwardPos = $this->nextPosition($pos, $forwardDir);
-        $rightPos = $this->nextPosition($pos, $rightDir);
-        $leftPos = $this->nextPosition($pos, $leftDir);
-        $backPos = $this->nextPosition($pos, $backDir);
+        $forwardPos = Direction::nextPosition($pos, $forwardDir);
+        $rightPos = Direction::nextPosition($pos, $rightDir);
+        $leftPos = Direction::nextPosition($pos, $leftDir);
+        $backPos = Direction::nextPosition($pos, $backDir);
 
         // If the goal is at a side, move to it
         if ($forwardPos->y == $this->goal->y && $forwardPos->x == $this->goal->x) {
@@ -132,18 +144,23 @@ Usleep(250000);echo PHP_EOL;
             return $backDir;
         }
 
+        // Now we can turn right or left or go forward depending on the score
+        $forwardValid = $this->isValidPosition($forwardPos, true);
+        $rightValid = $this->isValidPosition($rightPos, true);
+        $leftValid = $this->isValidPosition($leftPos, true);
+
         // Go forward if possible
-        if ($this->isValidPosition($forwardPos, true)) {
+        if ($forwardValid) {
             return $forwardDir;
         }
 
         // Turn right if possible
-        if ($this->isValidPosition($rightPos, true)) {
+        if ($rightValid) {
             return $rightDir;
         }
 
         // Turn left if possible
-        if ($this->isValidPosition($leftPos, true)) {
+        if ($leftValid) {
             return $leftDir;
         }
 
@@ -151,7 +168,8 @@ Usleep(250000);echo PHP_EOL;
         $moves = array();
 
         $currentContent = $this->maze[$pos->y][$pos->x];
-        $this->maze[$pos->y][$pos->x] = -2;
+        $this->iter = $currentContent + 1;
+        $this->maze[$pos->y][$pos->x] = CellType::TYPE_VISITED;
 
         if ($this->isValidPosition($forwardPos)) {
             $forwardContent = $this->maze[$forwardPos->y][$forwardPos->x];
@@ -211,44 +229,15 @@ Usleep(250000);echo PHP_EOL;
             return false;
         }
 
-        if ($this->maze[$pos->y][$pos->x] < 0) {
+        if ($this->maze[$pos->y][$pos->x] == CellType::TYPE_VISITED
+            || $this->maze[$pos->y][$pos->x] == CellType::TYPE_WALL) {
             return false;
         }
 
-        if ($onlyEmpty && $this->maze[$pos->y][$pos->x] != 0) {
+        if ($onlyEmpty && $this->maze[$pos->y][$pos->x] > 0) {
             return false;
         }
 
         return true;
-    }
-
-    /**
-     * Computes the next position
-     *
-     * @param \stdClass $pos
-     * @param string    $dir
-     * @return \stdClass
-     */
-    private function nextPosition(\stdClass $pos, $dir)
-    {
-        $new = clone $pos;
-        switch ($dir) {
-            case Direction::UP:
-                --$new->y;
-                break;
-
-            case Direction::DOWN:
-                ++$new->y;
-                break;
-
-            case Direction::LEFT:
-                --$new->x;
-                break;
-
-            case Direction::RIGHT:
-                ++$new->x;
-                break;
-        }
-        return $new;
     }
 }

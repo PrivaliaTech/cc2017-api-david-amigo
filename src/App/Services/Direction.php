@@ -53,4 +53,34 @@ class Direction
         }
         return $dir;
     }
+
+    /**
+     * Computes the next position
+     *
+     * @param \stdClass $pos
+     * @param string    $dir
+     * @return \stdClass
+     */
+    public static function nextPosition(\stdClass $pos, $dir)
+    {
+        $new = clone $pos;
+        switch ($dir) {
+            case Direction::UP:
+                --$new->y;
+                break;
+
+            case Direction::DOWN:
+                ++$new->y;
+                break;
+
+            case Direction::LEFT:
+                --$new->x;
+                break;
+
+            case Direction::RIGHT:
+                ++$new->x;
+                break;
+        }
+        return $new;
+    }
 }
