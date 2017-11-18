@@ -1,6 +1,6 @@
 {
     "require": {
-        "php": ">=5.3,<5.4",
+        "php": "~7",
         "silex/silex": "~1.0",
         "symfony/console": "~2.7"
     },
