@@ -1,17 +1,17 @@
-version: '2'
+version: '2.1'
 services:
 
     # See: docker/Dockerfile
     code_challenge_api:
         build: .
 
-        restart: always
+        restart: "always"
 
-        container_name: docker_code_challenge_api
+        container_name: "docker_code_challenge_api"
 
         environment:
-            APACHE_RUN_USER: david
-            APACHE_RUN_GROUP: david
+            APACHE_RUN_USER: "david"
+            APACHE_RUN_GROUP: "david"
 
         ports:
             - "8081:80"
@@ -19,4 +19,10 @@ services:
         volumes:
             - "../.:/var/www/html"
 
-        network_mode: "bridge"
+        networks:
+            - "code_challenge_network"
+
+networks:
+    code_challenge_network:
+        external: true
+        name: "code_challenge_network"
